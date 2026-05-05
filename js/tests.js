@@ -13,6 +13,7 @@ export function assertEqual(actual, expected, msg) {
 
 export async function runTests() {
   // import test modules here as they're added
+  await import('./schema.test.js');
   document.body.innerHTML = '<pre id="out" style="padding:1rem;color:#f4f1e8;background:#073a22"></pre>';
   const out = document.getElementById('out');
   let pass = 0, fail = 0;
