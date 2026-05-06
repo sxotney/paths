@@ -31,6 +31,7 @@ export function mountEditor(root) {
     <section id="canvas"></section>
     <footer class="bar bar-bottom">
       <div id="step-hint"></div>
+      <button id="start-over">Start over</button>
       <button id="redo-path">Redo path</button>
       <div id="tip-grid"></div>
       <div id="pace-buttons"></div>
@@ -49,6 +50,15 @@ export function mountEditor(root) {
     editing.obFinal = null;
     editing.cueFinal = null;
     editing.step = 'placeOBFinal';
+    redraw(); updateStepHint(); maybeEnableSave();
+  });
+  document.getElementById('start-over').addEventListener('click', () => {
+    editing = {
+      cueBall: null, objectBall: null, objectBallColor: editing.objectBallColor,
+      blockers: [], pocket: null,
+      obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeCue',
+    };
+    document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
     redraw(); updateStepHint(); maybeEnableSave();
   });
   document.getElementById('save-variant').addEventListener('click', () => {
@@ -190,6 +200,12 @@ function redraw() {
     const m = renderBall({ ...editing.obFinal, color: editing.objectBallColor });
     m.setAttribute('opacity', 0.35);
     m.setAttribute('data-role', 'ob-final');
+    svg.appendChild(m);
+  }
+  if (editing.cueFinal) {
+    const m = renderBall({ ...editing.cueFinal, color: 'white' });
+    m.setAttribute('opacity', 0.35);
+    m.setAttribute('data-role', 'cue-final');
     svg.appendChild(m);
   }
   canvas.appendChild(svg);

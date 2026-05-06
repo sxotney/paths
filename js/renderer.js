@@ -208,7 +208,9 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
     g.appendChild(obLine);
   }
 
-  // Cue after-contact line: OB → cue final (solid white, with endpoint marker)
+  // Cue after-contact line: OB → cue final (solid white). Cue-final marker
+  // is rendered separately by the editor as a translucent white ball, matching
+  // the OB-final visual style.
   if (objectBall && cueFinal) {
     const cueLine = document.createElementNS(SVG_NS, 'line');
     cueLine.setAttribute('x1', objectBall.x);
@@ -220,17 +222,6 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
     cueLine.setAttribute('stroke-linecap', 'round');
     cueLine.setAttribute('data-role', 'cue-line');
     g.appendChild(cueLine);
-
-    const ep = document.createElementNS(SVG_NS, 'circle');
-    ep.setAttribute('cx', cueFinal.x);
-    ep.setAttribute('cy', cueFinal.y);
-    ep.setAttribute('r', 14);
-    ep.setAttribute('fill', 'none');
-    ep.setAttribute('stroke', '#f4f1e8');
-    ep.setAttribute('stroke-width', 3);
-    ep.setAttribute('data-role', 'endpoint');
-    g.appendChild(ep);
   }
-
   return g;
 }
