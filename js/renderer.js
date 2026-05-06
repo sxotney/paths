@@ -189,14 +189,16 @@ function ghostBallPosition(objectBall, obFinal) {
   };
 }
 
-export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectBallColor }) {
+export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectBallColor, obWaypoints = [], cueWaypoints = [] }) {
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('data-role', 'cue-lines');
 
-  const ghost = (objectBall && obFinal) ? ghostBallPosition(objectBall, obFinal) : null;
+  // OB's first outgoing target — the first waypoint (cushion strike) if any,
+  // else the final position. This drives ghost ball positioning.
+  const obFirstTarget = obWaypoints.length > 0 ? obWaypoints[0] : obFinal;
+  const ghost = (objectBall && obFirstTarget) ? ghostBallPosition(objectBall, obFirstTarget) : null;
 
-  // Aim line: cue → ghost (preferred — physically correct contact point), or
-  // cue → OB centre as fallback when ghost is not yet computable.
+  // Aim line: cue → ghost (preferred), or cue → OB centre as fallback.
   if (cueBall && (ghost || objectBall)) {
     const aimEnd = ghost || objectBall;
     const aim = document.createElementNS(SVG_NS, 'line');
@@ -211,35 +213,35 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
     g.appendChild(aim);
   }
 
-  // OB line: OB → OB final (in OB's colour, faded)
+  // OB polyline: OB → waypoints → obFinal
   if (objectBall && obFinal) {
-    const obLine = document.createElementNS(SVG_NS, 'line');
-    obLine.setAttribute('x1', objectBall.x);
-    obLine.setAttribute('y1', objectBall.y);
-    obLine.setAttribute('x2', obFinal.x);
-    obLine.setAttribute('y2', obFinal.y);
-    obLine.setAttribute('stroke', BALL_FILL[objectBallColor] || '#999');
-    obLine.setAttribute('stroke-width', 4);
-    obLine.setAttribute('opacity', 0.7);
-    obLine.setAttribute('data-role', 'ob-line');
-    g.appendChild(obLine);
+    const points = [objectBall, ...obWaypoints, obFinal];
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', toPathD(points));
+    path.setAttribute('stroke', BALL_FILL[objectBallColor] || '#999');
+    path.setAttribute('stroke-width', 4);
+    path.setAttribute('opacity', 0.7);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('data-role', 'ob-line');
+    g.appendChild(path);
   }
 
-  // Cue after-contact line: ghost → cue final (solid white).
+  // Cue after-contact polyline: ghost → waypoints → cueFinal
   if (ghost && cueFinal) {
-    const cueLine = document.createElementNS(SVG_NS, 'line');
-    cueLine.setAttribute('x1', ghost.x);
-    cueLine.setAttribute('y1', ghost.y);
-    cueLine.setAttribute('x2', cueFinal.x);
-    cueLine.setAttribute('y2', cueFinal.y);
-    cueLine.setAttribute('stroke', '#f4f1e8');
-    cueLine.setAttribute('stroke-width', 5);
-    cueLine.setAttribute('stroke-linecap', 'round');
-    cueLine.setAttribute('data-role', 'cue-line');
-    g.appendChild(cueLine);
+    const points = [ghost, ...cueWaypoints, cueFinal];
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', toPathD(points));
+    path.setAttribute('stroke', '#f4f1e8');
+    path.setAttribute('stroke-width', 5);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('data-role', 'cue-line');
+    g.appendChild(path);
   }
 
-  // Ghost ball — outline of the cue ball at contact, touching the OB
+  // Ghost ball outline at contact
   if (ghost) {
     const gh = document.createElementNS(SVG_NS, 'circle');
     gh.setAttribute('cx', ghost.x);
@@ -278,4 +280,8 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
   }
 
   return g;
+}
+
+function toPathD(points) {
+  return points.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
 }

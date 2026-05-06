@@ -62,6 +62,8 @@ function redraw() {
     obFinal: variant.obFinal,
     cueFinal: variant.cueFinal,
     objectBallColor: pattern.setup.objectBall.color,
+    obWaypoints: variant.obWaypoints,
+    cueWaypoints: variant.cueWaypoints,
   }));
   // Solid balls on top
   svg.appendChild(renderBall({ ...pattern.setup.cueBall, color: 'white' }));

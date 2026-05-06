@@ -42,3 +42,32 @@ test('rejects catalogue with wrong version', () => {
   const c = { version: 2, table: { width: 3569, height: 1778 }, patterns: [] };
   assert(!validateCatalogue(c).ok);
 });
+
+test('accepts variant with valid waypoints', () => {
+  const c = emptyCatalogue();
+  c.patterns.push({
+    id: 'PP1', name: 'x',
+    setup: { cueBall:{x:0,y:0}, objectBall:{x:0,y:0,color:'red'}, blockers:[] },
+    variants: [{
+      id:'PP1-a', label:'a', tip:'C', pace:'firm',
+      cueFinal:{x:1,y:1}, obFinal:{x:2,y:2},
+      obWaypoints: [{x:10,y:0},{x:20,y:5}],
+      cueWaypoints: [{x:30,y:0}],
+    }],
+  });
+  assert(validateCatalogue(c).ok);
+});
+
+test('rejects variant with malformed waypoint', () => {
+  const c = emptyCatalogue();
+  c.patterns.push({
+    id: 'PP1', name: 'x',
+    setup: { cueBall:{x:0,y:0}, objectBall:{x:0,y:0,color:'red'}, blockers:[] },
+    variants: [{
+      id:'PP1-a', label:'a', tip:'C', pace:'firm',
+      cueFinal:{x:1,y:1}, obFinal:{x:2,y:2},
+      obWaypoints: [{x:10}],  // missing y
+    }],
+  });
+  assert(!validateCatalogue(c).ok);
+});

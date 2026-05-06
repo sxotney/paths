@@ -41,3 +41,4 @@ input, select { background:#0a4d2e; color:var(--white); border:1px solid var(--g
 .tip-cell.wrong { fill:var(--red) !important; stroke:var(--red) !important; stroke-width:2 !important; }
 .pace-cell.correct { background:#3fb74a !important; color:var(--white) !important; }
 .pace-cell.wrong { background:var(--red) !important; color:var(--white) !important; }
+#add-ball.on { background:#3fb74a; color:var(--white); border-color:#3fb74a; }

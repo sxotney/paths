@@ -5,10 +5,12 @@ import { tipWidgetSVG } from './tip-widget.js';
 
 let catalogue = loadDraft();
 let activePatternId = null;
+let placingBlocker = false;
 let editing = {
   cueBall: null, objectBall: null, objectBallColor: 'red',
   blockers: [], pocket: null,
   obFinal: null, cueFinal: null,
+  obWaypoints: [], cueWaypoints: [],
   tip: null, pace: null,
   activeVariants: [], // saved variants of the active pattern, rendered as faint overlays
   step: 'placeCue', // placeCue | placeOB | placeOBFinal | placeCueFinal | pickInputs
@@ -33,6 +35,7 @@ export function mountEditor(root) {
     <section id="canvas"></section>
     <footer class="bar bar-bottom">
       <div id="step-hint"></div>
+      <button id="add-ball">+ball</button>
       <button id="start-over">Start over</button>
       <button id="redo-path">Redo path</button>
       <div id="tip-grid"></div>
@@ -48,9 +51,16 @@ export function mountEditor(root) {
     editing.objectBallColor = e.target.value;
     redraw();
   });
+  document.getElementById('add-ball').addEventListener('click', () => {
+    placingBlocker = !placingBlocker;
+    document.getElementById('add-ball').classList.toggle('on', placingBlocker);
+    updateStepHint();
+  });
   document.getElementById('redo-path').addEventListener('click', () => {
     editing.obFinal = null;
     editing.cueFinal = null;
+    editing.obWaypoints = [];
+    editing.cueWaypoints = [];
     editing.step = 'placeOBFinal';
     redraw(); updateStepHint(); maybeEnableSave();
   });
@@ -58,11 +68,15 @@ export function mountEditor(root) {
     editing = {
       cueBall: null, objectBall: null, objectBallColor: editing.objectBallColor,
       blockers: [], pocket: null,
-      obFinal: null, cueFinal: null, tip: null, pace: null,
+      obFinal: null, cueFinal: null,
+      obWaypoints: [], cueWaypoints: [],
+      tip: null, pace: null,
       activeVariants: [],
       step: 'placeCue',
     };
     activePatternId = null;
+    placingBlocker = false;
+    document.getElementById('add-ball').classList.remove('on');
     document.getElementById('pattern-select').value = '';
     document.getElementById('pattern-name').value = '';
     document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
@@ -88,21 +102,26 @@ export function mountEditor(root) {
       activePatternId = id;
     }
     const vId = `${pattern.id}-${String.fromCharCode(97 + pattern.variants.length)}`; // a, b, c, ...
-    pattern.variants.push({
+    const variant = {
       id: vId,
       label: `${editing.tip} ${editing.pace}`,
       tip: editing.tip,
       pace: editing.pace,
       cueFinal: editing.cueFinal,
       obFinal: editing.obFinal,
-    });
+    };
+    if (editing.obWaypoints.length) variant.obWaypoints = editing.obWaypoints.slice();
+    if (editing.cueWaypoints.length) variant.cueWaypoints = editing.cueWaypoints.slice();
+    pattern.variants.push(variant);
     saveDraft(catalogue);
     refreshPatternList();
     document.getElementById('pattern-select').value = pattern.id;
     // Reset for next variant — keep setup, clear destinations/inputs, refresh archive.
     editing = {
       ...editing,
-      obFinal: null, cueFinal: null, tip: null, pace: null,
+      obFinal: null, cueFinal: null,
+      obWaypoints: [], cueWaypoints: [],
+      tip: null, pace: null,
       activeVariants: pattern.variants.slice(),
       step: 'placeOBFinal',
     };
@@ -140,7 +159,7 @@ function bindPatternSelect() {
         blockers: p.setup.blockers,
         activeVariants: p.variants.slice(),
         step: 'placeOBFinal',
-        obFinal: null, cueFinal: null, tip: null, pace: null,
+        obFinal: null, cueFinal: null, obWaypoints: [], cueWaypoints: [], tip: null, pace: null,
       };
       document.getElementById('ob-color').value = editing.objectBallColor;
     } else {
@@ -148,7 +167,9 @@ function bindPatternSelect() {
       editing = {
         cueBall: null, objectBall: null, objectBallColor: 'red',
         blockers: [], pocket: null,
-        obFinal: null, cueFinal: null, tip: null, pace: null,
+        obFinal: null, cueFinal: null,
+        obWaypoints: [], cueWaypoints: [],
+        tip: null, pace: null,
         activeVariants: [],
         step: 'placeCue',
       };
@@ -211,6 +232,8 @@ function redraw() {
       obFinal: v.obFinal,
       cueFinal: v.cueFinal,
       objectBallColor: editing.objectBallColor,
+      obWaypoints: v.obWaypoints,
+      cueWaypoints: v.cueWaypoints,
     }));
     svg.appendChild(wrap);
   }
@@ -221,6 +244,8 @@ function redraw() {
     obFinal: editing.obFinal,
     cueFinal: editing.cueFinal,
     objectBallColor: editing.objectBallColor,
+    obWaypoints: editing.obWaypoints,
+    cueWaypoints: editing.cueWaypoints,
   }));
   // Solid balls for cue + OB (drawn ON TOP of all paths)
   if (editing.cueBall) svg.appendChild(renderBall({ ...editing.cueBall, color: 'white' }));
@@ -236,9 +261,19 @@ function svgPoint(svg, evt) {
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
+function isOnCushion(p) {
+  return p.x < 0 || p.x > 3569 || p.y < 0 || p.y > 1778;
+}
+
 function bindCanvasInteractions(svg) {
   svg.addEventListener('pointerdown', e => {
     const p = svgPoint(svg, e);
+    // Blocker placement mode preempts the state machine.
+    if (placingBlocker) {
+      editing.blockers.push({ x: p.x, y: p.y, color: 'red' });
+      redraw();
+      return;
+    }
     if (editing.step === 'placeCue') {
       editing.cueBall = { x: p.x, y: p.y };
       editing.step = 'placeOB';
@@ -248,23 +283,37 @@ function bindCanvasInteractions(svg) {
       editing.step = 'placeOBFinal';
       redraw(); updateStepHint();
     } else if (editing.step === 'placeOBFinal') {
-      editing.obFinal = { x: p.x, y: p.y };
-      editing.step = 'placeCueFinal';
-      redraw(); updateStepHint();
+      if (isOnCushion(p)) {
+        editing.obWaypoints.push({ x: p.x, y: p.y });
+        redraw();
+      } else {
+        editing.obFinal = { x: p.x, y: p.y };
+        editing.step = 'placeCueFinal';
+        redraw(); updateStepHint();
+      }
     } else if (editing.step === 'placeCueFinal') {
-      editing.cueFinal = { x: p.x, y: p.y };
-      editing.step = 'pickInputs';
-      redraw(); updateStepHint(); maybeEnableSave();
+      if (isOnCushion(p)) {
+        editing.cueWaypoints.push({ x: p.x, y: p.y });
+        redraw();
+      } else {
+        editing.cueFinal = { x: p.x, y: p.y };
+        editing.step = 'pickInputs';
+        redraw(); updateStepHint(); maybeEnableSave();
+      }
     }
   });
 }
 
 function updateStepHint() {
+  if (placingBlocker) {
+    document.getElementById('step-hint').textContent = 'Tap to place red blocker (or +ball again to exit)';
+    return;
+  }
   const hints = {
     placeCue: 'Tap to place cue ball',
     placeOB: 'Tap to place object ball',
-    placeOBFinal: 'Tap to mark object ball final position',
-    placeCueFinal: 'Tap to mark cue ball final position',
+    placeOBFinal: 'Tap on cloth to set OB final, on cushion for a bounce',
+    placeCueFinal: 'Tap on cloth to set cue final, on cushion for a bounce',
     pickInputs: 'Pick tip cell and pace, then Save',
   };
   document.getElementById('step-hint').textContent = hints[editing.step] || '';

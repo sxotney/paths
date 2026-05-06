@@ -17,6 +17,18 @@ function validateVariant(v) {
   if (!PACE_BUCKETS.includes(v.pace)) return `variant.pace invalid: ${v.pace}`;
   if (!isPoint(v.cueFinal)) return 'variant.cueFinal missing point';
   if (!isPoint(v.obFinal)) return 'variant.obFinal missing point';
+  if (v.obWaypoints !== undefined) {
+    if (!Array.isArray(v.obWaypoints)) return 'variant.obWaypoints must be array';
+    for (const w of v.obWaypoints) {
+      if (!isPoint(w)) return 'variant.obWaypoints contains invalid point';
+    }
+  }
+  if (v.cueWaypoints !== undefined) {
+    if (!Array.isArray(v.cueWaypoints)) return 'variant.cueWaypoints must be array';
+    for (const w of v.cueWaypoints) {
+      if (!isPoint(w)) return 'variant.cueWaypoints contains invalid point';
+    }
+  }
   return null;
 }
 
