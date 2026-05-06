@@ -24,8 +24,8 @@ const POCKETS = [
 // - Black at 324 mm from the top cushion (x = 3569 - 324 = 3245).
 // - Pink at midpoint between centre and black: (1784.5 + 3245) / 2 ≈ 2515.
 const SPOTS = {
-  yellow: { x: 737,     y: 1778/2 - 292 },
-  green:  { x: 737,     y: 1778/2 + 292 },
+  yellow: { x: 737,     y: 1778/2 + 292 },
+  green:  { x: 737,     y: 1778/2 - 292 },
   brown:  { x: 737,     y: 1778/2 },
   blue:   { x: 3569/2,  y: 1778/2 },
   pink:   { x: 2515,    y: 1778/2 },
@@ -88,7 +88,7 @@ export function renderTable() {
     dot.setAttribute('cy', pos.y);
     dot.setAttribute('r', 6);
     dot.setAttribute('fill', SPOT_COLOR[name]);
-    dot.setAttribute('opacity', 0.45);
+    dot.setAttribute('opacity', 0.9);
     dot.setAttribute('data-role', 'spot');
     dot.setAttribute('data-name', name);
     svg.appendChild(dot);
@@ -101,7 +101,7 @@ const BALL_FILL = {
   white:'#f4f1e8', red:'#c8313c', yellow:'#e8c948', green:'#1e7a3e',
   brown:'#6b3a1f', blue:'#1d4ea8', pink:'#e8a4b8', black:'#111'
 };
-const BALL_RADIUS = 26.25; // mm — half of 52.5mm full-size snooker ball
+const BALL_RADIUS = 78.75; // mm — 3× snooker ball radius for legibility on phone screens
 
 export function renderBall({ x, y, color }) {
   const c = document.createElementNS(SVG_NS, 'circle');
