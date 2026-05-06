@@ -53,6 +53,46 @@ export function mountEditor(root) {
     editing.step = 'drawPath';
     redraw(); updateStepHint(); maybeEnableSave();
   });
+  document.getElementById('save-variant').addEventListener('click', () => {
+    const name = document.getElementById('pattern-name').value.trim();
+    if (!activePatternId && !name) { alert('Name the pattern first'); return; }
+
+    let pattern = activePatternId ? catalogue.patterns.find(p => p.id === activePatternId) : null;
+    if (!pattern) {
+      const id = `PP${catalogue.patterns.length + 1}`;
+      pattern = {
+        id, name,
+        setup: {
+          cueBall: editing.cueBall,
+          objectBall: { ...editing.objectBall, color: editing.objectBallColor },
+          blockers: editing.blockers,
+        },
+        variants: [],
+      };
+      catalogue.patterns.push(pattern);
+      activePatternId = id;
+    }
+    const vId = `${pattern.id}-${String.fromCharCode(97 + pattern.variants.length)}`; // a, b, c, ...
+    pattern.variants.push({
+      id: vId,
+      label: `${editing.tip} ${editing.pace}`,
+      tip: editing.tip,
+      pace: editing.pace,
+      cuePath: editing.cuePath,
+      obFinal: editing.obFinal,
+    });
+    saveDraft(catalogue);
+    refreshPatternList();
+    document.getElementById('pattern-select').value = pattern.id;
+    // Reset for next variant — keep setup, clear path/inputs.
+    editing = {
+      ...editing,
+      cuePath: null, obFinal: null, tip: null, pace: null, step: 'drawPath',
+    };
+    document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
+    redraw(); updateStepHint(); maybeEnableSave();
+    alert(`Saved ${vId}`);
+  });
   renderTipGrid();
   renderPaceButtons();
   updateStepHint();
