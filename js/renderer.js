@@ -119,7 +119,7 @@ export function renderTable() {
     const dot = document.createElementNS(SVG_NS, 'circle');
     dot.setAttribute('cx', pos.x);
     dot.setAttribute('cy', pos.y);
-    dot.setAttribute('r', 6);
+    dot.setAttribute('r', 30);
     dot.setAttribute('fill', SPOT_COLOR[name]);
     dot.setAttribute('opacity', 0.9);
     dot.setAttribute('data-role', 'spot');
@@ -134,7 +134,7 @@ const BALL_FILL = {
   white:'#f4f1e8', red:'#c8313c', yellow:'#e8c948', green:'#1e7a3e',
   brown:'#6b3a1f', blue:'#1d4ea8', pink:'#e8a4b8', black:'#111'
 };
-const BALL_RADIUS = 236.25; // mm — 9× snooker ball radius for legibility on phone screens
+const BALL_RADIUS = 30; // mm — half the pocket radius (60), keeps balls and spots visually consistent
 
 export function renderBall({ x, y, color }) {
   const c = document.createElementNS(SVG_NS, 'circle');
