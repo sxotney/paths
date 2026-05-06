@@ -3,7 +3,7 @@ import { loadShipped } from './storage.js';
 import { pickVariant } from './picker.js';
 import { tipWidgetSVG } from './tip-widget.js';
 import { PACE_BUCKETS } from './schema.js';
-import { recordResult } from './score.js';
+import { recordResult, recordSeenWithoutGuess } from './score.js';
 
 let catalogue = null;
 let current = null; // { pattern, variant }
@@ -95,6 +95,10 @@ function bindInputs() {
     revealResult();
   });
   document.getElementById('puzzle-next').addEventListener('click', loadNext);
+  document.getElementById('puzzle-show-me').addEventListener('click', () => {
+    if (!current || inputState.locked) return;
+    showWithoutScoring();
+  });
 }
 
 function maybeEnableReveal() {
@@ -123,4 +127,24 @@ function revealResult() {
   document.getElementById('puzzle-next').hidden = false;
   inputState.locked = true;
   recordResult(variant.id, isCorrect);
+}
+
+function showWithoutScoring() {
+  const { variant } = current;
+  const correctTip = variant.tip;
+  const correctPace = variant.pace;
+  // Mark only the correct cells; player's selection is cleared
+  document.querySelectorAll('#puzzle-tip .tip-cell').forEach(el => {
+    el.classList.remove('on');
+    if (el.dataset.tip === correctTip) el.classList.add('correct');
+  });
+  document.querySelectorAll('#puzzle-pace .pace-cell').forEach(el => {
+    el.classList.remove('on');
+    if (el.dataset.pace === correctPace) el.classList.add('correct');
+  });
+  document.getElementById('puzzle-result').textContent = '';
+  document.getElementById('puzzle-reveal').hidden = true;
+  document.getElementById('puzzle-next').hidden = false;
+  inputState.locked = true;
+  recordSeenWithoutGuess(variant.id);
 }
