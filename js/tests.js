@@ -17,6 +17,7 @@ export async function runTests() {
   await import('./storage.test.js');
   await import('./path-trace.test.js');
   await import('./renderer.test.js');
+  await import('./score.test.js');
   document.body.innerHTML = '<pre id="out" style="padding:1rem;color:#f4f1e8;background:#073a22"></pre>';
   const out = document.getElementById('out');
   let pass = 0, fail = 0;
