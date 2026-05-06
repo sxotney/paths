@@ -1,8 +1,8 @@
 import { test, assert, assertEqual } from './tests.js';
 import { validateCatalogue, emptyCatalogue, TIP_CELLS, PACE_BUCKETS } from './schema.js';
 
-test('TIP_CELLS has 9 entries', () => {
-  assertEqual(TIP_CELLS.length, 9);
+test('TIP_CELLS contents', () => {
+  assertEqual(TIP_CELLS, ['TL','T','TR','L','C','R','BL','B','BR']);
 });
 
 test('PACE_BUCKETS has 4 entries', () => {
@@ -35,5 +35,10 @@ test('rejects unknown tip cell', () => {
     setup: { cueBall: {x:0,y:0}, objectBall: {x:0,y:0,color:'red'}, blockers: [] },
     variants: [{ id: 'PPX-a', label: '', tip: 'NOPE', pace: 'firm', cuePath: 'M0,0', obFinal: {x:0,y:0} }]
   });
+  assert(!validateCatalogue(c).ok);
+});
+
+test('rejects catalogue with wrong version', () => {
+  const c = { version: 2, table: { width: 3569, height: 1778 }, patterns: [] };
   assert(!validateCatalogue(c).ok);
 });

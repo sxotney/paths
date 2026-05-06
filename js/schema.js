@@ -8,7 +8,7 @@ export function emptyCatalogue() {
 }
 
 function isPoint(p) {
-  return p && typeof p.x === 'number' && typeof p.y === 'number';
+  return p && Number.isFinite(p.x) && Number.isFinite(p.y);
 }
 
 function validateVariant(v) {
