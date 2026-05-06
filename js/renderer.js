@@ -96,3 +96,49 @@ export function renderTable() {
 
   return svg;
 }
+
+const BALL_FILL = {
+  white:'#f4f1e8', red:'#c8313c', yellow:'#e8c948', green:'#1e7a3e',
+  brown:'#6b3a1f', blue:'#1d4ea8', pink:'#e8a4b8', black:'#111'
+};
+const BALL_RADIUS = 26.25; // mm — half of 52.5mm full-size snooker ball
+
+export function renderBall({ x, y, color }) {
+  const c = document.createElementNS(SVG_NS, 'circle');
+  c.setAttribute('cx', x);
+  c.setAttribute('cy', y);
+  c.setAttribute('r', BALL_RADIUS);
+  c.setAttribute('fill', BALL_FILL[color] || '#999');
+  c.setAttribute('stroke', 'rgba(0,0,0,0.4)');
+  c.setAttribute('stroke-width', 1.5);
+  c.setAttribute('data-role', 'ball');
+  c.setAttribute('data-color', color);
+  return c;
+}
+
+export function renderCuePath(d) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('data-role', 'cue-path');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('stroke', '#f4f1e8');
+  path.setAttribute('stroke-width', 4);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  g.appendChild(path);
+  // Endpoint marker — read last coord from d attribute.
+  const m = d.match(/([\d.\-]+)[, ]([\d.\-]+)\s*$/);
+  if (m) {
+    const ep = document.createElementNS(SVG_NS, 'circle');
+    ep.setAttribute('cx', m[1]);
+    ep.setAttribute('cy', m[2]);
+    ep.setAttribute('r', 14);
+    ep.setAttribute('fill', 'none');
+    ep.setAttribute('stroke', '#f4f1e8');
+    ep.setAttribute('stroke-width', 3);
+    ep.setAttribute('data-role', 'endpoint');
+    g.appendChild(ep);
+  }
+  return g;
+}
