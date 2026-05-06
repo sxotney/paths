@@ -18,9 +18,14 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--green-deep);
 .bar-bottom { border-top:1px solid var(--grid-line); }
 #canvas { flex:1; display:flex; align-items:center; justify-content:center; padding:.25rem; min-height:0; }
 #canvas svg { width:100%; height:100%; max-height:100%; touch-action:none; }
-#tip-grid { display:grid; grid-template-columns:repeat(3,2.4rem); grid-template-rows:repeat(3,2.4rem); gap:2px; }
-.tip-cell, .pace-cell { background:#0a4d2e; color:var(--white); border:1px solid var(--grid-line); border-radius:4px; font-size:.75rem; }
-.tip-cell.on, .pace-cell.on { background:var(--white); color:var(--green-deep); }
+#tip-grid { width:5rem; height:5rem; flex:0 0 auto; }
+#tip-grid svg { width:100%; height:100%; display:block; }
+.tip-ball { fill: var(--white); stroke: rgba(0,0,0,0.35); stroke-width: 1; }
+.tip-axis { stroke: rgba(0,0,0,0.18); stroke-width: 0.6; }
+.tip-cell { fill: rgba(0,0,0,0.45); cursor: pointer; }
+.tip-cell.on { fill: var(--green-deep); stroke: var(--green-deep); stroke-width: 2; }
+.pace-cell { background:#0a4d2e; color:var(--white); border:1px solid var(--grid-line); border-radius:4px; font-size:.75rem; padding:.4rem .5rem; }
+.pace-cell.on { background:var(--white); color:var(--green-deep); }
 #pace-buttons { display:flex; gap:.25rem; }
 button { font-family:inherit; padding:.4rem .6rem; }
 button:disabled { opacity:.4; }

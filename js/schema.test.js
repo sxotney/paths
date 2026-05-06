@@ -2,7 +2,7 @@ import { test, assert, assertEqual } from './tests.js';
 import { validateCatalogue, emptyCatalogue, TIP_CELLS, PACE_BUCKETS } from './schema.js';
 
 test('TIP_CELLS contents', () => {
-  assertEqual(TIP_CELLS, ['TL','T','TR','L','C','R','BL','B','BR']);
+  assertEqual(TIP_CELLS, ['T2','TL','T','TR','L2','L','C','R','R2','BL','B','BR','B2']);
 });
 
 test('PACE_BUCKETS has 4 entries', () => {

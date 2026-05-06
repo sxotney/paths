@@ -1,4 +1,4 @@
-export const TIP_CELLS = ['TL','T','TR','L','C','R','BL','B','BR'];
+export const TIP_CELLS = ['T2','TL','T','TR','L2','L','C','R','R2','BL','B','BR','B2'];
 export const PACE_BUCKETS = ['gentle','medium','firm','hard'];
 export const TABLE = { width: 3569, height: 1778 };
 export const BALL_COLORS = ['white','red','yellow','green','brown','blue','pink','black'];
