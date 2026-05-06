@@ -15,6 +15,7 @@ test('saveDraft + loadDraft round-trips', () => {
   saveDraft(c);
   const back = loadDraft();
   assertEqual(back.patterns[0].id, 'PPX');
+  clearDraft(); // don't leak test fixture into the user's editor session
 });
 
 test('exportJSON returns pretty-printed JSON', () => {
