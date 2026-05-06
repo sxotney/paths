@@ -3,6 +3,7 @@ import { loadShipped } from './storage.js';
 import { pickVariant } from './picker.js';
 import { tipWidgetSVG } from './tip-widget.js';
 import { PACE_BUCKETS } from './schema.js';
+import { recordResult } from './score.js';
 
 let catalogue = null;
 let current = null; // { pattern, variant }
@@ -89,8 +90,36 @@ function bindInputs() {
     pace.querySelectorAll('.pace-cell').forEach(x => x.classList.toggle('on', x === b));
     maybeEnableReveal();
   });
+  document.getElementById('puzzle-reveal').addEventListener('click', () => {
+    if (!current) return;
+    revealResult();
+  });
 }
 
 function maybeEnableReveal() {
   document.getElementById('puzzle-reveal').disabled = !(inputState.tip && inputState.pace);
+}
+
+function revealResult() {
+  const { variant } = current;
+  const correctTip = variant.tip;
+  const correctPace = variant.pace;
+  const isCorrect = inputState.tip === correctTip && inputState.pace === correctPace;
+
+  // Highlight tip cells
+  document.querySelectorAll('#puzzle-tip .tip-cell').forEach(el => {
+    if (el.dataset.tip === correctTip) el.classList.add('correct');
+    else if (el.classList.contains('on')) el.classList.add('wrong');
+  });
+  // Highlight pace cells
+  document.querySelectorAll('#puzzle-pace .pace-cell').forEach(el => {
+    if (el.dataset.pace === correctPace) el.classList.add('correct');
+    else if (el.classList.contains('on')) el.classList.add('wrong');
+  });
+
+  document.getElementById('puzzle-result').textContent = isCorrect ? '✓' : '✗';
+  document.getElementById('puzzle-reveal').hidden = true;
+  document.getElementById('puzzle-next').hidden = false;
+  inputState.locked = true;
+  recordResult(variant.id, isCorrect);
 }
