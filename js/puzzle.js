@@ -94,6 +94,7 @@ function bindInputs() {
     if (!current) return;
     revealResult();
   });
+  document.getElementById('puzzle-next').addEventListener('click', loadNext);
 }
 
 function maybeEnableReveal() {
