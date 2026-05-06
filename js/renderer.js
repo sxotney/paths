@@ -8,13 +8,17 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Naming: T = y=0 edge, B = y=1778 edge, L = x=0 edge, R = x=3569 edge.
 // Visual orientation (which is "top") is set by CSS transform on the SVG host.
 
+const CUSHION = 200; // mm — visible rail/cushion width framing the cloth
+
+// Pocket centres are pushed OUTSIDE the cloth so only a small arc bites into
+// the play area; the rest of the circle sits on the cushion as the pocket mouth.
 const POCKETS = [
-  { id: 'TL', x: 0,         y: 0    },
-  { id: 'TM', x: 3569/2,    y: 0    },
-  { id: 'TR', x: 3569,      y: 0    },
-  { id: 'BL', x: 0,         y: 1778 },
-  { id: 'BM', x: 3569/2,    y: 1778 },
-  { id: 'BR', x: 3569,      y: 1778 },
+  { id: 'TL', x: -45,         y: -45        },
+  { id: 'TM', x: 3569/2,      y: -60        },
+  { id: 'TR', x: 3569 + 45,   y: -45        },
+  { id: 'BL', x: -45,         y: 1778 + 45  },
+  { id: 'BM', x: 3569/2,      y: 1778 + 60  },
+  { id: 'BR', x: 3569 + 45,   y: 1778 + 45  },
 ];
 
 // Snooker spot standard positions:
@@ -39,23 +43,34 @@ const SPOT_COLOR = {
 
 export function renderTable() {
   const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${TABLE.width} ${TABLE.height}`);
+  svg.setAttribute('viewBox', `${-CUSHION} ${-CUSHION} ${TABLE.width + 2*CUSHION} ${TABLE.height + 2*CUSHION}`);
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('data-role', 'table');
 
-  // Cloth background
+  // Cushion frame (outer, brown)
+  const cushion = document.createElementNS(SVG_NS, 'rect');
+  cushion.setAttribute('x', -CUSHION);
+  cushion.setAttribute('y', -CUSHION);
+  cushion.setAttribute('width', TABLE.width + 2*CUSHION);
+  cushion.setAttribute('height', TABLE.height + 2*CUSHION);
+  cushion.setAttribute('fill', '#4a2818');
+  cushion.setAttribute('data-role', 'cushion');
+  svg.appendChild(cushion);
+
+  // Cloth background (inner, green)
   const bg = document.createElementNS(SVG_NS, 'rect');
   bg.setAttribute('width', TABLE.width);
   bg.setAttribute('height', TABLE.height);
   bg.setAttribute('fill', '#0a4d2e');
+  bg.setAttribute('data-role', 'cloth');
   svg.appendChild(bg);
 
-  // Pockets
+  // Pockets — centres outside the cloth; only a small arc bites into the play area
   for (const p of POCKETS) {
     const c = document.createElementNS(SVG_NS, 'circle');
     c.setAttribute('cx', p.x);
     c.setAttribute('cy', p.y);
-    c.setAttribute('r', 60);
+    c.setAttribute('r', 90);
     c.setAttribute('fill', '#000');
     c.setAttribute('data-role', 'pocket');
     c.setAttribute('data-id', p.id);
