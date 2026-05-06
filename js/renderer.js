@@ -8,17 +8,18 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Naming: T = y=0 edge, B = y=1778 edge, L = x=0 edge, R = x=3569 edge.
 // Visual orientation (which is "top") is set by CSS transform on the SVG host.
 
-const CUSHION = 200; // mm — visible rail/cushion width framing the cloth
+const CUSHION = 100; // mm — visible rail/cushion width framing the cloth
 
-// Pocket centres are pushed OUTSIDE the cloth so only a small arc bites into
-// the play area; the rest of the circle sits on the cushion as the pocket mouth.
+// Pocket centres are pushed slightly outside the cloth; pockets are clipped
+// to the cloth area so the cushion overlaps the part outside, leaving only a
+// small arc visible inside the play area as the pocket mouth.
 const POCKETS = [
-  { id: 'TL', x: -45,         y: -45        },
-  { id: 'TM', x: 3569/2,      y: -60        },
-  { id: 'TR', x: 3569 + 45,   y: -45        },
-  { id: 'BL', x: -45,         y: 1778 + 45  },
-  { id: 'BM', x: 3569/2,      y: 1778 + 60  },
-  { id: 'BR', x: 3569 + 45,   y: 1778 + 45  },
+  { id: 'TL', x: -25,         y: -25        },
+  { id: 'TM', x: 3569/2,      y: -30        },
+  { id: 'TR', x: 3569 + 25,   y: -25        },
+  { id: 'BL', x: -25,         y: 1778 + 25  },
+  { id: 'BM', x: 3569/2,      y: 1778 + 30  },
+  { id: 'BR', x: 3569 + 25,   y: 1778 + 25  },
 ];
 
 // Snooker spot standard positions:
@@ -47,6 +48,20 @@ export function renderTable() {
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('data-role', 'table');
 
+  // Clip-path for cloth area — pockets render only inside this rectangle,
+  // so the cushion overlaps any part of a pocket circle that strays onto it.
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  const clip = document.createElementNS(SVG_NS, 'clipPath');
+  clip.setAttribute('id', 'cloth-clip');
+  const clipRect = document.createElementNS(SVG_NS, 'rect');
+  clipRect.setAttribute('x', 0);
+  clipRect.setAttribute('y', 0);
+  clipRect.setAttribute('width', TABLE.width);
+  clipRect.setAttribute('height', TABLE.height);
+  clip.appendChild(clipRect);
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
   // Cushion frame (outer, brown)
   const cushion = document.createElementNS(SVG_NS, 'rect');
   cushion.setAttribute('x', -CUSHION);
@@ -65,17 +80,20 @@ export function renderTable() {
   bg.setAttribute('data-role', 'cloth');
   svg.appendChild(bg);
 
-  // Pockets — centres outside the cloth; only a small arc bites into the play area
+  // Pockets — clipped to cloth so cushion overlaps the part outside the play area
+  const pocketGroup = document.createElementNS(SVG_NS, 'g');
+  pocketGroup.setAttribute('clip-path', 'url(#cloth-clip)');
   for (const p of POCKETS) {
     const c = document.createElementNS(SVG_NS, 'circle');
     c.setAttribute('cx', p.x);
     c.setAttribute('cy', p.y);
-    c.setAttribute('r', 90);
+    c.setAttribute('r', 60);
     c.setAttribute('fill', '#000');
     c.setAttribute('data-role', 'pocket');
     c.setAttribute('data-id', p.id);
-    svg.appendChild(c);
+    pocketGroup.appendChild(c);
   }
+  svg.appendChild(pocketGroup);
 
   // Baulk line
   const baulk = document.createElementNS(SVG_NS, 'line');
@@ -116,7 +134,7 @@ const BALL_FILL = {
   white:'#f4f1e8', red:'#c8313c', yellow:'#e8c948', green:'#1e7a3e',
   brown:'#6b3a1f', blue:'#1d4ea8', pink:'#e8a4b8', black:'#111'
 };
-const BALL_RADIUS = 78.75; // mm — 3× snooker ball radius for legibility on phone screens
+const BALL_RADIUS = 236.25; // mm — 9× snooker ball radius for legibility on phone screens
 
 export function renderBall({ x, y, color }) {
   const c = document.createElementNS(SVG_NS, 'circle');
