@@ -9,6 +9,7 @@ let editing = {
   blockers: [], pocket: null,
   obFinal: null, cueFinal: null,
   tip: null, pace: null,
+  activeVariants: [], // saved variants of the active pattern, rendered as faint overlays
   step: 'placeCue', // placeCue | placeOB | placeOBFinal | placeCueFinal | pickInputs
 };
 
@@ -56,8 +57,13 @@ export function mountEditor(root) {
     editing = {
       cueBall: null, objectBall: null, objectBallColor: editing.objectBallColor,
       blockers: [], pocket: null,
-      obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeCue',
+      obFinal: null, cueFinal: null, tip: null, pace: null,
+      activeVariants: [],
+      step: 'placeCue',
     };
+    activePatternId = null;
+    document.getElementById('pattern-select').value = '';
+    document.getElementById('pattern-name').value = '';
     document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
     redraw(); updateStepHint(); maybeEnableSave();
   });
@@ -92,10 +98,12 @@ export function mountEditor(root) {
     saveDraft(catalogue);
     refreshPatternList();
     document.getElementById('pattern-select').value = pattern.id;
-    // Reset for next variant — keep setup, clear destinations/inputs.
+    // Reset for next variant — keep setup, clear destinations/inputs, refresh archive.
     editing = {
       ...editing,
-      obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeOBFinal',
+      obFinal: null, cueFinal: null, tip: null, pace: null,
+      activeVariants: pattern.variants.slice(),
+      step: 'placeOBFinal',
     };
     document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
     redraw(); updateStepHint(); maybeEnableSave();
@@ -129,6 +137,7 @@ function bindPatternSelect() {
         objectBall: { x: p.setup.objectBall.x, y: p.setup.objectBall.y },
         objectBallColor: p.setup.objectBall.color,
         blockers: p.setup.blockers,
+        activeVariants: p.variants.slice(),
         step: 'placeOBFinal',
         obFinal: null, cueFinal: null, tip: null, pace: null,
       };
@@ -138,7 +147,9 @@ function bindPatternSelect() {
       editing = {
         cueBall: null, objectBall: null, objectBallColor: 'red',
         blockers: [], pocket: null,
-        obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeCue'
+        obFinal: null, cueFinal: null, tip: null, pace: null,
+        activeVariants: [],
+        step: 'placeCue',
       };
       document.getElementById('ob-color').value = 'red';
     }
@@ -199,11 +210,28 @@ function maybeEnableSave() {
   const ok = editing.cueBall && editing.objectBall && editing.obFinal && editing.cueFinal && editing.tip && editing.pace;
   document.getElementById('save-variant').disabled = !ok;
 }
+const SVG_NS = 'http://www.w3.org/2000/svg';
 function redraw() {
   const canvas = document.getElementById('canvas');
   canvas.innerHTML = '';
   const svg = renderTable();
-  // Lines render UNDER balls so balls draw on top
+  // Archived variants for the active pattern — render at reduced opacity so
+  // they sit behind the in-progress variant as visible context.
+  for (const v of editing.activeVariants || []) {
+    const wrap = document.createElementNS(SVG_NS, 'g');
+    wrap.setAttribute('opacity', '0.4');
+    wrap.setAttribute('data-role', 'archived-variant');
+    wrap.setAttribute('data-variant-id', v.id);
+    wrap.appendChild(renderCueLines({
+      cueBall: editing.cueBall,
+      objectBall: editing.objectBall,
+      obFinal: v.obFinal,
+      cueFinal: v.cueFinal,
+      objectBallColor: editing.objectBallColor,
+    }));
+    svg.appendChild(wrap);
+  }
+  // In-progress variant at full opacity
   svg.appendChild(renderCueLines({
     cueBall: editing.cueBall,
     objectBall: editing.objectBall,
@@ -211,21 +239,10 @@ function redraw() {
     cueFinal: editing.cueFinal,
     objectBallColor: editing.objectBallColor,
   }));
+  // Solid balls for cue + OB (drawn ON TOP of all paths)
   if (editing.cueBall) svg.appendChild(renderBall({ ...editing.cueBall, color: 'white' }));
   if (editing.objectBall) svg.appendChild(renderBall({ ...editing.objectBall, color: editing.objectBallColor }));
   for (const b of editing.blockers) svg.appendChild(renderBall(b));
-  if (editing.obFinal) {
-    const m = renderBall({ ...editing.obFinal, color: editing.objectBallColor });
-    m.setAttribute('opacity', 0.35);
-    m.setAttribute('data-role', 'ob-final');
-    svg.appendChild(m);
-  }
-  if (editing.cueFinal) {
-    const m = renderBall({ ...editing.cueFinal, color: 'white' });
-    m.setAttribute('opacity', 0.35);
-    m.setAttribute('data-role', 'cue-final');
-    svg.appendChild(m);
-  }
   canvas.appendChild(svg);
   bindCanvasInteractions(svg);
 }

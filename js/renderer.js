@@ -176,17 +176,34 @@ export function renderCuePath(d) {
   return g;
 }
 
+// Ghost ball: the cue ball's position at the moment of contact with the OB,
+// touching it on the side opposite to the OB's outgoing direction.
+function ghostBallPosition(objectBall, obFinal) {
+  const dx = obFinal.x - objectBall.x;
+  const dy = obFinal.y - objectBall.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return null;
+  return {
+    x: objectBall.x - (dx / len) * 2 * BALL_RADIUS,
+    y: objectBall.y - (dy / len) * 2 * BALL_RADIUS,
+  };
+}
+
 export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectBallColor }) {
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('data-role', 'cue-lines');
 
-  // Aim line: cue → OB (dashed white)
-  if (cueBall && objectBall) {
+  const ghost = (objectBall && obFinal) ? ghostBallPosition(objectBall, obFinal) : null;
+
+  // Aim line: cue → ghost (preferred — physically correct contact point), or
+  // cue → OB centre as fallback when ghost is not yet computable.
+  if (cueBall && (ghost || objectBall)) {
+    const aimEnd = ghost || objectBall;
     const aim = document.createElementNS(SVG_NS, 'line');
     aim.setAttribute('x1', cueBall.x);
     aim.setAttribute('y1', cueBall.y);
-    aim.setAttribute('x2', objectBall.x);
-    aim.setAttribute('y2', objectBall.y);
+    aim.setAttribute('x2', aimEnd.x);
+    aim.setAttribute('y2', aimEnd.y);
     aim.setAttribute('stroke', 'rgba(244,241,232,0.65)');
     aim.setAttribute('stroke-width', 4);
     aim.setAttribute('stroke-dasharray', '20 12');
@@ -208,13 +225,11 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
     g.appendChild(obLine);
   }
 
-  // Cue after-contact line: OB → cue final (solid white). Cue-final marker
-  // is rendered separately by the editor as a translucent white ball, matching
-  // the OB-final visual style.
-  if (objectBall && cueFinal) {
+  // Cue after-contact line: ghost → cue final (solid white).
+  if (ghost && cueFinal) {
     const cueLine = document.createElementNS(SVG_NS, 'line');
-    cueLine.setAttribute('x1', objectBall.x);
-    cueLine.setAttribute('y1', objectBall.y);
+    cueLine.setAttribute('x1', ghost.x);
+    cueLine.setAttribute('y1', ghost.y);
     cueLine.setAttribute('x2', cueFinal.x);
     cueLine.setAttribute('y2', cueFinal.y);
     cueLine.setAttribute('stroke', '#f4f1e8');
@@ -223,5 +238,44 @@ export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectB
     cueLine.setAttribute('data-role', 'cue-line');
     g.appendChild(cueLine);
   }
+
+  // Ghost ball — outline of the cue ball at contact, touching the OB
+  if (ghost) {
+    const gh = document.createElementNS(SVG_NS, 'circle');
+    gh.setAttribute('cx', ghost.x);
+    gh.setAttribute('cy', ghost.y);
+    gh.setAttribute('r', BALL_RADIUS);
+    gh.setAttribute('fill', 'rgba(244,241,232,0.18)');
+    gh.setAttribute('stroke', 'rgba(244,241,232,0.7)');
+    gh.setAttribute('stroke-width', 2);
+    gh.setAttribute('stroke-dasharray', '4 3');
+    gh.setAttribute('data-role', 'ghost-ball');
+    g.appendChild(gh);
+  }
+
+  // OB-final translucent ball
+  if (obFinal) {
+    const ob = document.createElementNS(SVG_NS, 'circle');
+    ob.setAttribute('cx', obFinal.x);
+    ob.setAttribute('cy', obFinal.y);
+    ob.setAttribute('r', BALL_RADIUS);
+    ob.setAttribute('fill', BALL_FILL[objectBallColor] || '#999');
+    ob.setAttribute('opacity', 0.35);
+    ob.setAttribute('data-role', 'ob-final');
+    g.appendChild(ob);
+  }
+
+  // Cue-final translucent white ball
+  if (cueFinal) {
+    const cf = document.createElementNS(SVG_NS, 'circle');
+    cf.setAttribute('cx', cueFinal.x);
+    cf.setAttribute('cy', cueFinal.y);
+    cf.setAttribute('r', BALL_RADIUS);
+    cf.setAttribute('fill', BALL_FILL.white);
+    cf.setAttribute('opacity', 0.35);
+    cf.setAttribute('data-role', 'cue-final');
+    g.appendChild(cf);
+  }
+
   return g;
 }
