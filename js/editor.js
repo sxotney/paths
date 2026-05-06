@@ -17,6 +17,15 @@ export function mountEditor(root) {
     <header class="bar">
       <select id="pattern-select"><option value="">(new pattern)</option></select>
       <input id="pattern-name" placeholder="Pattern name"/>
+      <select id="ob-color">
+        <option value="red">red</option>
+        <option value="yellow">yellow</option>
+        <option value="green">green</option>
+        <option value="brown">brown</option>
+        <option value="blue">blue</option>
+        <option value="pink">pink</option>
+        <option value="black">black</option>
+      </select>
       <button id="export">Export</button>
     </header>
     <section id="canvas"></section>
@@ -31,6 +40,10 @@ export function mountEditor(root) {
   refreshPatternList();
   bindPatternSelect();
   bindExport();
+  document.getElementById('ob-color').addEventListener('change', e => {
+    editing.objectBallColor = e.target.value;
+    redraw();
+  });
   renderTipGrid();
   renderPaceButtons();
   updateStepHint();
@@ -62,6 +75,7 @@ function bindPatternSelect() {
         step: 'drawPath',
         cuePath: null, obFinal: null, tip: null, pace: null,
       };
+      document.getElementById('ob-color').value = editing.objectBallColor;
     } else {
       nameInput.value = '';
       editing = {
@@ -69,6 +83,7 @@ function bindPatternSelect() {
         blockers: [], pocket: null,
         cuePath: null, obFinal: null, tip: null, pace: null, step: 'placeCue'
       };
+      document.getElementById('ob-color').value = 'red';
     }
     redraw();
     updateStepHint();
@@ -127,8 +142,30 @@ function redraw() {
   bindCanvasInteractions(svg);
 }
 
+function svgPoint(svg, evt) {
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
 function bindCanvasInteractions(svg) {
-  // implemented in Task 10
+  svg.addEventListener('pointerdown', e => {
+    const p = svgPoint(svg, e);
+    if (editing.step === 'placeCue') {
+      editing.cueBall = { x: p.x, y: p.y };
+      editing.step = 'placeOB';
+      redraw(); updateStepHint();
+    } else if (editing.step === 'placeOB') {
+      editing.objectBall = { x: p.x, y: p.y };
+      editing.step = 'drawPath';
+      redraw(); updateStepHint();
+    } else if (editing.step === 'placeOBFinal') {
+      editing.obFinal = { x: p.x, y: p.y };
+      editing.step = 'pickInputs';
+      redraw(); updateStepHint(); maybeEnableSave();
+    }
+    // 'drawPath' is handled in Task 11 (drag, not tap)
+  });
 }
 
 function updateStepHint() {
