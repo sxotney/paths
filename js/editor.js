@@ -1,4 +1,4 @@
-import { renderTable, renderBall, renderCueLines } from './renderer.js';
+import { renderTable, renderBall, renderCueLines, BALL_RADIUS } from './renderer.js';
 import { loadDraft, saveDraft, exportJSON } from './storage.js';
 import { emptyCatalogue, TIP_CELLS, PACE_BUCKETS } from './schema.js';
 import { tipWidgetSVG } from './tip-widget.js';
@@ -265,26 +265,67 @@ function isOnCushion(p) {
   return p.x < 0 || p.x > 3569 || p.y < 0 || p.y > 1778;
 }
 
+// Clamp a click that landed past the cushion back to the play-area edge,
+// so the bounce waypoint sits on the cushion boundary (not in the brown rail).
+function clampToCushion(p) {
+  return {
+    x: Math.max(0, Math.min(3569, p.x)),
+    y: Math.max(0, Math.min(1778, p.y)),
+  };
+}
+
+function existingBalls() {
+  const out = [];
+  if (editing.cueBall) out.push(editing.cueBall);
+  if (editing.objectBall) out.push(editing.objectBall);
+  for (const b of editing.blockers) out.push(b);
+  return out;
+}
+
+// If the click lands inside an existing ball, push the new ball to be tangent
+// in the direction from that ball toward the click point (so it ends up on the
+// side closest to where the user clicked). Iterate to handle chained overlaps.
+function resolveBallPlacement(p, existing) {
+  let pos = { x: p.x, y: p.y };
+  const minDist = 2 * BALL_RADIUS;
+  for (let iter = 0; iter < 8; iter++) {
+    let conflict = null;
+    for (const b of existing) {
+      const dx = pos.x - b.x;
+      const dy = pos.y - b.y;
+      const d = Math.hypot(dx, dy);
+      if (d < minDist - 0.01) { conflict = { b, dx, dy, d }; break; }
+    }
+    if (!conflict) break;
+    const { b, dx, dy, d } = conflict;
+    if (d === 0) { pos.x = b.x + minDist; pos.y = b.y; }
+    else { pos.x = b.x + (dx / d) * minDist; pos.y = b.y + (dy / d) * minDist; }
+  }
+  return pos;
+}
+
 function bindCanvasInteractions(svg) {
   svg.addEventListener('pointerdown', e => {
     const p = svgPoint(svg, e);
     // Blocker placement mode preempts the state machine.
     if (placingBlocker) {
-      editing.blockers.push({ x: p.x, y: p.y, color: 'red' });
+      const pos = resolveBallPlacement(p, existingBalls());
+      editing.blockers.push({ x: pos.x, y: pos.y, color: 'red' });
       redraw();
       return;
     }
     if (editing.step === 'placeCue') {
-      editing.cueBall = { x: p.x, y: p.y };
+      editing.cueBall = { x: p.x, y: p.y }; // first ball — no conflicts possible
       editing.step = 'placeOB';
       redraw(); updateStepHint();
     } else if (editing.step === 'placeOB') {
-      editing.objectBall = { x: p.x, y: p.y };
+      const pos = resolveBallPlacement(p, existingBalls());
+      editing.objectBall = { x: pos.x, y: pos.y };
       editing.step = 'placeOBFinal';
       redraw(); updateStepHint();
     } else if (editing.step === 'placeOBFinal') {
       if (isOnCushion(p)) {
-        editing.obWaypoints.push({ x: p.x, y: p.y });
+        editing.obWaypoints.push(clampToCushion(p));
         redraw();
       } else {
         editing.obFinal = { x: p.x, y: p.y };
@@ -293,7 +334,7 @@ function bindCanvasInteractions(svg) {
       }
     } else if (editing.step === 'placeCueFinal') {
       if (isOnCushion(p)) {
-        editing.cueWaypoints.push({ x: p.x, y: p.y });
+        editing.cueWaypoints.push(clampToCushion(p));
         redraw();
       } else {
         editing.cueFinal = { x: p.x, y: p.y };

@@ -134,7 +134,7 @@ const BALL_FILL = {
   white:'#f4f1e8', red:'#c8313c', yellow:'#e8c948', green:'#1e7a3e',
   brown:'#6b3a1f', blue:'#1d4ea8', pink:'#e8a4b8', black:'#111'
 };
-const BALL_RADIUS = 30; // mm — half the pocket radius (60), keeps balls and spots visually consistent
+export const BALL_RADIUS = 30; // mm — half the pocket radius (60), keeps balls and spots visually consistent
 
 export function renderBall({ x, y, color }) {
   const c = document.createElementNS(SVG_NS, 'circle');
