@@ -113,7 +113,19 @@ export function mountEditor(root) {
     if (editing.obWaypoints.length) variant.obWaypoints = editing.obWaypoints.slice();
     if (editing.cueWaypoints.length) variant.cueWaypoints = editing.cueWaypoints.slice();
     pattern.variants.push(variant);
-    saveDraft(catalogue);
+    try {
+      saveDraft(catalogue);
+    } catch (err) {
+      // Validation failed — most likely a non-finite coordinate slipped through.
+      // Pop the variant we just pushed so the in-memory catalogue stays clean.
+      pattern.variants.pop();
+      if (pattern.variants.length === 0 && pattern === catalogue.patterns[catalogue.patterns.length - 1] && !activePatternId) {
+        catalogue.patterns.pop();
+        activePatternId = null;
+      }
+      alert('Save failed: ' + err.message + '\n\nVariant: ' + JSON.stringify(variant, null, 2));
+      return;
+    }
     refreshPatternList();
     document.getElementById('pattern-select').value = pattern.id;
     // Reset for next variant — keep setup, clear destinations/inputs, refresh archive.
