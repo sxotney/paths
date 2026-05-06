@@ -54,9 +54,11 @@ function redraw() {
   canvas.innerHTML = '';
   const svg = renderTable();
   if (!current) { canvas.appendChild(svg); return; }
+  // All cue lines + balls go inside the rotated portrait-wrap so they appear
+  // in the same orientation as the table.
+  const portraitWrap = svg.querySelector('[data-role="portrait-wrap"]');
   const { pattern, variant } = current;
-  // Cue lines + ghost + destination markers
-  svg.appendChild(renderCueLines({
+  portraitWrap.appendChild(renderCueLines({
     cueBall: pattern.setup.cueBall,
     objectBall: pattern.setup.objectBall,
     obFinal: variant.obFinal,
@@ -65,10 +67,9 @@ function redraw() {
     obWaypoints: variant.obWaypoints,
     cueWaypoints: variant.cueWaypoints,
   }));
-  // Solid balls on top
-  svg.appendChild(renderBall({ ...pattern.setup.cueBall, color: 'white' }));
-  svg.appendChild(renderBall({ ...pattern.setup.objectBall }));
-  for (const b of pattern.setup.blockers) svg.appendChild(renderBall(b));
+  portraitWrap.appendChild(renderBall({ ...pattern.setup.cueBall, color: 'white' }));
+  portraitWrap.appendChild(renderBall({ ...pattern.setup.objectBall }));
+  for (const b of pattern.setup.blockers) portraitWrap.appendChild(renderBall(b));
   canvas.appendChild(svg);
 }
 

@@ -219,6 +219,9 @@ function redraw() {
   const canvas = document.getElementById('canvas');
   canvas.innerHTML = '';
   const svg = renderTable();
+  // All ball + line content goes inside the portrait-wrap group so it gets
+  // rotated alongside the table.
+  const portraitWrap = svg.querySelector('[data-role="portrait-wrap"]');
   // Archived variants for the active pattern — render at reduced opacity so
   // they sit behind the in-progress variant as visible context.
   for (const v of editing.activeVariants || []) {
@@ -235,10 +238,10 @@ function redraw() {
       obWaypoints: v.obWaypoints,
       cueWaypoints: v.cueWaypoints,
     }));
-    svg.appendChild(wrap);
+    portraitWrap.appendChild(wrap);
   }
   // In-progress variant at full opacity
-  svg.appendChild(renderCueLines({
+  portraitWrap.appendChild(renderCueLines({
     cueBall: editing.cueBall,
     objectBall: editing.objectBall,
     obFinal: editing.obFinal,
@@ -248,17 +251,20 @@ function redraw() {
     cueWaypoints: editing.cueWaypoints,
   }));
   // Solid balls for cue + OB (drawn ON TOP of all paths)
-  if (editing.cueBall) svg.appendChild(renderBall({ ...editing.cueBall, color: 'white' }));
-  if (editing.objectBall) svg.appendChild(renderBall({ ...editing.objectBall, color: editing.objectBallColor }));
-  for (const b of editing.blockers) svg.appendChild(renderBall(b));
+  if (editing.cueBall) portraitWrap.appendChild(renderBall({ ...editing.cueBall, color: 'white' }));
+  if (editing.objectBall) portraitWrap.appendChild(renderBall({ ...editing.objectBall, color: editing.objectBallColor }));
+  for (const b of editing.blockers) portraitWrap.appendChild(renderBall(b));
   canvas.appendChild(svg);
   bindCanvasInteractions(svg);
 }
 
 function svgPoint(svg, evt) {
+  // Use the rotated portrait-wrap's CTM so client coords map directly to the
+  // original landscape coordinate system that all catalogue data is authored in.
+  const wrap = svg.querySelector('[data-role="portrait-wrap"]') || svg;
   const pt = svg.createSVGPoint();
   pt.x = evt.clientX; pt.y = evt.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
+  return pt.matrixTransform(wrap.getScreenCTM().inverse());
 }
 
 function isOnCushion(p) {

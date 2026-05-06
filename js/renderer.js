@@ -44,7 +44,11 @@ const SPOT_COLOR = {
 
 export function renderTable() {
   const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', `${-CUSHION} ${-CUSHION} ${TABLE.width + 2*CUSHION} ${TABLE.height + 2*CUSHION}`);
+  // Portrait viewBox — short axis horizontal, long axis vertical. Inner content
+  // is authored in landscape coords (x = long axis 0..3569, y = short axis
+  // 0..1778) and rotated by the wrapper group below; this keeps catalogue
+  // data in its natural coordinate system and only the display flips.
+  svg.setAttribute('viewBox', `${-CUSHION} ${-CUSHION} ${TABLE.height + 2*CUSHION} ${TABLE.width + 2*CUSHION}`);
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('data-role', 'table');
 
@@ -62,6 +66,16 @@ export function renderTable() {
   defs.appendChild(clip);
   svg.appendChild(defs);
 
+  // Wrapper group: rotate landscape content (-90°) and translate so the long
+  // axis runs vertically on screen. Original (0,0) → (0, TABLE.width).
+  const portraitWrap = document.createElementNS(SVG_NS, 'g');
+  portraitWrap.setAttribute('transform', `translate(0 ${TABLE.width}) rotate(-90)`);
+  portraitWrap.setAttribute('data-role', 'portrait-wrap');
+  svg.appendChild(portraitWrap);
+  // Use portraitWrap as the parent for everything below by reassigning svg
+  // locally; subsequent appendChild calls go to portraitWrap.
+  const wrap = portraitWrap;
+
   // Cushion frame (outer, brown)
   const cushion = document.createElementNS(SVG_NS, 'rect');
   cushion.setAttribute('x', -CUSHION);
@@ -70,7 +84,7 @@ export function renderTable() {
   cushion.setAttribute('height', TABLE.height + 2*CUSHION);
   cushion.setAttribute('fill', '#4a2818');
   cushion.setAttribute('data-role', 'cushion');
-  svg.appendChild(cushion);
+  wrap.appendChild(cushion);
 
   // Cloth background (inner, green)
   const bg = document.createElementNS(SVG_NS, 'rect');
@@ -78,7 +92,7 @@ export function renderTable() {
   bg.setAttribute('height', TABLE.height);
   bg.setAttribute('fill', '#0a4d2e');
   bg.setAttribute('data-role', 'cloth');
-  svg.appendChild(bg);
+  wrap.appendChild(bg);
 
   // Pockets — clipped to cloth so cushion overlaps the part outside the play area
   const pocketGroup = document.createElementNS(SVG_NS, 'g');
@@ -93,7 +107,7 @@ export function renderTable() {
     c.setAttribute('data-id', p.id);
     pocketGroup.appendChild(c);
   }
-  svg.appendChild(pocketGroup);
+  wrap.appendChild(pocketGroup);
 
   // Baulk line
   const baulk = document.createElementNS(SVG_NS, 'line');
@@ -102,7 +116,7 @@ export function renderTable() {
   baulk.setAttribute('stroke', 'rgba(255,255,255,0.25)');
   baulk.setAttribute('stroke-width', 4);
   baulk.setAttribute('data-role', 'baulk-line');
-  svg.appendChild(baulk);
+  wrap.appendChild(baulk);
 
   // D arc
   const d = document.createElementNS(SVG_NS, 'path');
@@ -112,7 +126,7 @@ export function renderTable() {
   d.setAttribute('stroke-width', 4);
   d.setAttribute('fill', 'none');
   d.setAttribute('data-role', 'd-arc');
-  svg.appendChild(d);
+  wrap.appendChild(d);
 
   // Spots
   for (const [name, pos] of Object.entries(SPOTS)) {
@@ -124,7 +138,7 @@ export function renderTable() {
     dot.setAttribute('opacity', 0.9);
     dot.setAttribute('data-role', 'spot');
     dot.setAttribute('data-name', name);
-    svg.appendChild(dot);
+    wrap.appendChild(dot);
   }
 
   return svg;
