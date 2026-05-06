@@ -6,6 +6,7 @@ import { PACE_BUCKETS } from './schema.js';
 
 let catalogue = null;
 let current = null; // { pattern, variant }
+let inputState = { tip: null, pace: null, locked: false };
 
 export async function mountPuzzle(root) {
   root.innerHTML = `
@@ -24,10 +25,18 @@ export async function mountPuzzle(root) {
   `;
   catalogue = await loadShipped();
   loadNext();
+  bindInputs();
 }
 
 function loadNext() {
   current = pickVariant(catalogue);
+  inputState = { tip: null, pace: null, locked: false };
+  document.querySelectorAll('#puzzle-tip .tip-cell').forEach(x => x.classList.remove('on','correct','wrong'));
+  document.querySelectorAll('#puzzle-pace .pace-cell').forEach(x => x.classList.remove('on','correct','wrong'));
+  document.getElementById('puzzle-result').textContent = '';
+  document.getElementById('puzzle-reveal').disabled = true;
+  document.getElementById('puzzle-reveal').hidden = false;
+  document.getElementById('puzzle-next').hidden = true;
   const nameEl = document.getElementById('puzzle-pattern-name');
   if (!current) {
     nameEl.textContent = 'No patterns yet — open ?edit=1 to author one.';
@@ -58,4 +67,30 @@ function redraw() {
   svg.appendChild(renderBall({ ...pattern.setup.objectBall }));
   for (const b of pattern.setup.blockers) svg.appendChild(renderBall(b));
   canvas.appendChild(svg);
+}
+
+function bindInputs() {
+  const tip = document.getElementById('puzzle-tip');
+  const pace = document.getElementById('puzzle-pace');
+
+  tip.addEventListener('click', e => {
+    if (inputState.locked) return;
+    const b = e.target.closest('.tip-cell');
+    if (!b) return;
+    inputState.tip = b.dataset.tip;
+    tip.querySelectorAll('.tip-cell').forEach(x => x.classList.toggle('on', x === b));
+    maybeEnableReveal();
+  });
+  pace.addEventListener('click', e => {
+    if (inputState.locked) return;
+    const b = e.target.closest('.pace-cell');
+    if (!b) return;
+    inputState.pace = b.dataset.pace;
+    pace.querySelectorAll('.pace-cell').forEach(x => x.classList.toggle('on', x === b));
+    maybeEnableReveal();
+  });
+}
+
+function maybeEnableReveal() {
+  document.getElementById('puzzle-reveal').disabled = !(inputState.tip && inputState.pace);
 }
