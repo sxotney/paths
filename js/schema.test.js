@@ -22,7 +22,7 @@ test('catalogue with one valid pattern + variant is valid', () => {
     patterns: [{
       id: 'PP1', name: 'Test',
       setup: { cueBall: {x:100,y:100}, objectBall: {x:200,y:200,color:'red'}, blockers: [] },
-      variants: [{ id: 'PP1-a', label: 'a', tip: 'C', pace: 'firm', cuePath: 'M100,100 L200,200', obFinal: {x:200,y:200} }]
+      variants: [{ id: 'PP1-a', label: 'a', tip: 'C', pace: 'firm', cueFinal: {x:300,y:300}, obFinal: {x:200,y:200} }]
     }]
   };
   assert(validateCatalogue(c).ok);
@@ -33,7 +33,7 @@ test('rejects unknown tip cell', () => {
   c.patterns.push({
     id: 'PPX', name: 'x',
     setup: { cueBall: {x:0,y:0}, objectBall: {x:0,y:0,color:'red'}, blockers: [] },
-    variants: [{ id: 'PPX-a', label: '', tip: 'NOPE', pace: 'firm', cuePath: 'M0,0', obFinal: {x:0,y:0} }]
+    variants: [{ id: 'PPX-a', label: '', tip: 'NOPE', pace: 'firm', cueFinal: {x:0,y:0}, obFinal: {x:0,y:0} }]
   });
   assert(!validateCatalogue(c).ok);
 });

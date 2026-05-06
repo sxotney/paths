@@ -1,18 +1,16 @@
-import { renderTable, renderBall, renderCuePath } from './renderer.js';
+import { renderTable, renderBall, renderCueLines } from './renderer.js';
 import { loadDraft, saveDraft, exportJSON } from './storage.js';
 import { emptyCatalogue, TIP_CELLS, PACE_BUCKETS } from './schema.js';
-import { simplify, pointsToPath } from './path-trace.js';
 
 let catalogue = loadDraft();
 let activePatternId = null;
 let editing = {
   cueBall: null, objectBall: null, objectBallColor: 'red',
   blockers: [], pocket: null,
-  cuePath: null, obFinal: null,
+  obFinal: null, cueFinal: null,
   tip: null, pace: null,
-  step: 'placeCue', // placeCue | placeOB | drawPath | placeOBFinal | pickInputs | done
+  step: 'placeCue', // placeCue | placeOB | placeOBFinal | placeCueFinal | pickInputs
 };
-let traceBuffer = null;
 
 export function mountEditor(root) {
   root.innerHTML = `
@@ -48,9 +46,9 @@ export function mountEditor(root) {
     redraw();
   });
   document.getElementById('redo-path').addEventListener('click', () => {
-    editing.cuePath = null;
     editing.obFinal = null;
-    editing.step = 'drawPath';
+    editing.cueFinal = null;
+    editing.step = 'placeOBFinal';
     redraw(); updateStepHint(); maybeEnableSave();
   });
   document.getElementById('save-variant').addEventListener('click', () => {
@@ -78,16 +76,16 @@ export function mountEditor(root) {
       label: `${editing.tip} ${editing.pace}`,
       tip: editing.tip,
       pace: editing.pace,
-      cuePath: editing.cuePath,
+      cueFinal: editing.cueFinal,
       obFinal: editing.obFinal,
     });
     saveDraft(catalogue);
     refreshPatternList();
     document.getElementById('pattern-select').value = pattern.id;
-    // Reset for next variant — keep setup, clear path/inputs.
+    // Reset for next variant — keep setup, clear destinations/inputs.
     editing = {
       ...editing,
-      cuePath: null, obFinal: null, tip: null, pace: null, step: 'drawPath',
+      obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeOBFinal',
     };
     document.querySelectorAll('.tip-cell.on, .pace-cell.on').forEach(x => x.classList.remove('on'));
     redraw(); updateStepHint(); maybeEnableSave();
@@ -121,8 +119,8 @@ function bindPatternSelect() {
         objectBall: { x: p.setup.objectBall.x, y: p.setup.objectBall.y },
         objectBallColor: p.setup.objectBall.color,
         blockers: p.setup.blockers,
-        step: 'drawPath',
-        cuePath: null, obFinal: null, tip: null, pace: null,
+        step: 'placeOBFinal',
+        obFinal: null, cueFinal: null, tip: null, pace: null,
       };
       document.getElementById('ob-color').value = editing.objectBallColor;
     } else {
@@ -130,7 +128,7 @@ function bindPatternSelect() {
       editing = {
         cueBall: null, objectBall: null, objectBallColor: 'red',
         blockers: [], pocket: null,
-        cuePath: null, obFinal: null, tip: null, pace: null, step: 'placeCue'
+        obFinal: null, cueFinal: null, tip: null, pace: null, step: 'placeCue'
       };
       document.getElementById('ob-color').value = 'red';
     }
@@ -170,17 +168,24 @@ function renderPaceButtons() {
   });
 }
 function maybeEnableSave() {
-  const ok = editing.cueBall && editing.objectBall && editing.cuePath && editing.obFinal && editing.tip && editing.pace;
+  const ok = editing.cueBall && editing.objectBall && editing.obFinal && editing.cueFinal && editing.tip && editing.pace;
   document.getElementById('save-variant').disabled = !ok;
 }
 function redraw() {
   const canvas = document.getElementById('canvas');
   canvas.innerHTML = '';
   const svg = renderTable();
+  // Lines render UNDER balls so balls draw on top
+  svg.appendChild(renderCueLines({
+    cueBall: editing.cueBall,
+    objectBall: editing.objectBall,
+    obFinal: editing.obFinal,
+    cueFinal: editing.cueFinal,
+    objectBallColor: editing.objectBallColor,
+  }));
   if (editing.cueBall) svg.appendChild(renderBall({ ...editing.cueBall, color: 'white' }));
   if (editing.objectBall) svg.appendChild(renderBall({ ...editing.objectBall, color: editing.objectBallColor }));
   for (const b of editing.blockers) svg.appendChild(renderBall(b));
-  if (editing.cuePath) svg.appendChild(renderCuePath(editing.cuePath));
   if (editing.obFinal) {
     const m = renderBall({ ...editing.obFinal, color: editing.objectBallColor });
     m.setAttribute('opacity', 0.35);
@@ -200,29 +205,23 @@ function svgPoint(svg, evt) {
 function bindCanvasInteractions(svg) {
   svg.addEventListener('pointerdown', e => {
     const p = svgPoint(svg, e);
-    if (editing.step === 'placeCue') { editing.cueBall = { x:p.x, y:p.y }; editing.step = 'placeOB'; redraw(); updateStepHint(); return; }
-    if (editing.step === 'placeOB')  { editing.objectBall = { x:p.x, y:p.y }; editing.step = 'drawPath'; redraw(); updateStepHint(); return; }
-    if (editing.step === 'placeOBFinal') { editing.obFinal = { x:p.x, y:p.y }; editing.step = 'pickInputs'; redraw(); updateStepHint(); maybeEnableSave(); return; }
-    if (editing.step === 'drawPath') {
-      traceBuffer = [{ x: p.x, y: p.y }];
-      svg.setPointerCapture(e.pointerId);
+    if (editing.step === 'placeCue') {
+      editing.cueBall = { x: p.x, y: p.y };
+      editing.step = 'placeOB';
+      redraw(); updateStepHint();
+    } else if (editing.step === 'placeOB') {
+      editing.objectBall = { x: p.x, y: p.y };
+      editing.step = 'placeOBFinal';
+      redraw(); updateStepHint();
+    } else if (editing.step === 'placeOBFinal') {
+      editing.obFinal = { x: p.x, y: p.y };
+      editing.step = 'placeCueFinal';
+      redraw(); updateStepHint();
+    } else if (editing.step === 'placeCueFinal') {
+      editing.cueFinal = { x: p.x, y: p.y };
+      editing.step = 'pickInputs';
+      redraw(); updateStepHint(); maybeEnableSave();
     }
-  });
-  svg.addEventListener('pointermove', e => {
-    if (editing.step !== 'drawPath' || !traceBuffer) return;
-    const p = svgPoint(svg, e);
-    const last = traceBuffer[traceBuffer.length - 1];
-    if (Math.hypot(p.x - last.x, p.y - last.y) < 8) return; // throttle
-    traceBuffer.push({ x: p.x, y: p.y });
-    editing.cuePath = pointsToPath(simplify(traceBuffer, 4));
-    redraw();
-  });
-  svg.addEventListener('pointerup', e => {
-    if (editing.step !== 'drawPath' || !traceBuffer) return;
-    editing.cuePath = pointsToPath(simplify(traceBuffer, 4));
-    traceBuffer = null;
-    editing.step = 'placeOBFinal';
-    redraw(); updateStepHint();
   });
 }
 
@@ -230,8 +229,8 @@ function updateStepHint() {
   const hints = {
     placeCue: 'Tap to place cue ball',
     placeOB: 'Tap to place object ball',
-    drawPath: 'Drag to trace cue ball path',
     placeOBFinal: 'Tap to mark object ball final position',
+    placeCueFinal: 'Tap to mark cue ball final position',
     pickInputs: 'Pick tip cell and pace, then Save',
   };
   document.getElementById('step-hint').textContent = hints[editing.step] || '';

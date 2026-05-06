@@ -15,7 +15,7 @@ function validateVariant(v) {
   if (!v.id || typeof v.id !== 'string') return 'variant.id missing';
   if (!TIP_CELLS.includes(v.tip)) return `variant.tip invalid: ${v.tip}`;
   if (!PACE_BUCKETS.includes(v.pace)) return `variant.pace invalid: ${v.pace}`;
-  if (typeof v.cuePath !== 'string' || !v.cuePath.startsWith('M')) return 'variant.cuePath must be SVG path d starting with M';
+  if (!isPoint(v.cueFinal)) return 'variant.cueFinal missing point';
   if (!isPoint(v.obFinal)) return 'variant.obFinal missing point';
   return null;
 }

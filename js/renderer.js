@@ -175,3 +175,62 @@ export function renderCuePath(d) {
   }
   return g;
 }
+
+export function renderCueLines({ cueBall, objectBall, obFinal, cueFinal, objectBallColor }) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('data-role', 'cue-lines');
+
+  // Aim line: cue → OB (dashed white)
+  if (cueBall && objectBall) {
+    const aim = document.createElementNS(SVG_NS, 'line');
+    aim.setAttribute('x1', cueBall.x);
+    aim.setAttribute('y1', cueBall.y);
+    aim.setAttribute('x2', objectBall.x);
+    aim.setAttribute('y2', objectBall.y);
+    aim.setAttribute('stroke', 'rgba(244,241,232,0.65)');
+    aim.setAttribute('stroke-width', 4);
+    aim.setAttribute('stroke-dasharray', '20 12');
+    aim.setAttribute('data-role', 'aim-line');
+    g.appendChild(aim);
+  }
+
+  // OB line: OB → OB final (in OB's colour, faded)
+  if (objectBall && obFinal) {
+    const obLine = document.createElementNS(SVG_NS, 'line');
+    obLine.setAttribute('x1', objectBall.x);
+    obLine.setAttribute('y1', objectBall.y);
+    obLine.setAttribute('x2', obFinal.x);
+    obLine.setAttribute('y2', obFinal.y);
+    obLine.setAttribute('stroke', BALL_FILL[objectBallColor] || '#999');
+    obLine.setAttribute('stroke-width', 4);
+    obLine.setAttribute('opacity', 0.7);
+    obLine.setAttribute('data-role', 'ob-line');
+    g.appendChild(obLine);
+  }
+
+  // Cue after-contact line: OB → cue final (solid white, with endpoint marker)
+  if (objectBall && cueFinal) {
+    const cueLine = document.createElementNS(SVG_NS, 'line');
+    cueLine.setAttribute('x1', objectBall.x);
+    cueLine.setAttribute('y1', objectBall.y);
+    cueLine.setAttribute('x2', cueFinal.x);
+    cueLine.setAttribute('y2', cueFinal.y);
+    cueLine.setAttribute('stroke', '#f4f1e8');
+    cueLine.setAttribute('stroke-width', 5);
+    cueLine.setAttribute('stroke-linecap', 'round');
+    cueLine.setAttribute('data-role', 'cue-line');
+    g.appendChild(cueLine);
+
+    const ep = document.createElementNS(SVG_NS, 'circle');
+    ep.setAttribute('cx', cueFinal.x);
+    ep.setAttribute('cy', cueFinal.y);
+    ep.setAttribute('r', 14);
+    ep.setAttribute('fill', 'none');
+    ep.setAttribute('stroke', '#f4f1e8');
+    ep.setAttribute('stroke-width', 3);
+    ep.setAttribute('data-role', 'endpoint');
+    g.appendChild(ep);
+  }
+
+  return g;
+}
