@@ -1,6 +1,7 @@
 import { renderTable, renderBall, renderCuePath } from './renderer.js';
 import { loadDraft, saveDraft, exportJSON } from './storage.js';
 import { emptyCatalogue, TIP_CELLS, PACE_BUCKETS } from './schema.js';
+import { simplify, pointsToPath } from './path-trace.js';
 
 let catalogue = loadDraft();
 let activePatternId = null;
@@ -11,6 +12,7 @@ let editing = {
   tip: null, pace: null,
   step: 'placeCue', // placeCue | placeOB | drawPath | placeOBFinal | pickInputs | done
 };
+let traceBuffer = null;
 
 export function mountEditor(root) {
   root.innerHTML = `
@@ -31,6 +33,7 @@ export function mountEditor(root) {
     <section id="canvas"></section>
     <footer class="bar bar-bottom">
       <div id="step-hint"></div>
+      <button id="redo-path">Redo path</button>
       <div id="tip-grid"></div>
       <div id="pace-buttons"></div>
       <button id="save-variant" disabled>Save variant</button>
@@ -43,6 +46,12 @@ export function mountEditor(root) {
   document.getElementById('ob-color').addEventListener('change', e => {
     editing.objectBallColor = e.target.value;
     redraw();
+  });
+  document.getElementById('redo-path').addEventListener('click', () => {
+    editing.cuePath = null;
+    editing.obFinal = null;
+    editing.step = 'drawPath';
+    redraw(); updateStepHint(); maybeEnableSave();
   });
   renderTipGrid();
   renderPaceButtons();
@@ -151,20 +160,29 @@ function svgPoint(svg, evt) {
 function bindCanvasInteractions(svg) {
   svg.addEventListener('pointerdown', e => {
     const p = svgPoint(svg, e);
-    if (editing.step === 'placeCue') {
-      editing.cueBall = { x: p.x, y: p.y };
-      editing.step = 'placeOB';
-      redraw(); updateStepHint();
-    } else if (editing.step === 'placeOB') {
-      editing.objectBall = { x: p.x, y: p.y };
-      editing.step = 'drawPath';
-      redraw(); updateStepHint();
-    } else if (editing.step === 'placeOBFinal') {
-      editing.obFinal = { x: p.x, y: p.y };
-      editing.step = 'pickInputs';
-      redraw(); updateStepHint(); maybeEnableSave();
+    if (editing.step === 'placeCue') { editing.cueBall = { x:p.x, y:p.y }; editing.step = 'placeOB'; redraw(); updateStepHint(); return; }
+    if (editing.step === 'placeOB')  { editing.objectBall = { x:p.x, y:p.y }; editing.step = 'drawPath'; redraw(); updateStepHint(); return; }
+    if (editing.step === 'placeOBFinal') { editing.obFinal = { x:p.x, y:p.y }; editing.step = 'pickInputs'; redraw(); updateStepHint(); maybeEnableSave(); return; }
+    if (editing.step === 'drawPath') {
+      traceBuffer = [{ x: p.x, y: p.y }];
+      svg.setPointerCapture(e.pointerId);
     }
-    // 'drawPath' is handled in Task 11 (drag, not tap)
+  });
+  svg.addEventListener('pointermove', e => {
+    if (editing.step !== 'drawPath' || !traceBuffer) return;
+    const p = svgPoint(svg, e);
+    const last = traceBuffer[traceBuffer.length - 1];
+    if (Math.hypot(p.x - last.x, p.y - last.y) < 8) return; // throttle
+    traceBuffer.push({ x: p.x, y: p.y });
+    editing.cuePath = pointsToPath(simplify(traceBuffer, 4));
+    redraw();
+  });
+  svg.addEventListener('pointerup', e => {
+    if (editing.step !== 'drawPath' || !traceBuffer) return;
+    editing.cuePath = pointsToPath(simplify(traceBuffer, 4));
+    traceBuffer = null;
+    editing.step = 'placeOBFinal';
+    redraw(); updateStepHint();
   });
 }
 
